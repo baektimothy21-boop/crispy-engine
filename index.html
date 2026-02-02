@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SSAT Rapid Battle: Verbal Edition</title>
+    <style>
+        body { font-family: 'Press Start 2P', 'Courier New', monospace; background: #1a1a2e; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        #game-container { width: 650px; background: #16213e; border: 6px solid #4834d4; padding: 20px; border-radius: 15px; box-shadow: 0 0 20px rgba(72, 52, 212, 0.5); }
+        
+        /* Battle Scene */
+        .battle-scene { height: 180px; display: flex; justify-content: space-between; align-items: flex-end; padding: 20px; background: #0f3460; border-radius: 10px; margin-bottom: 20px; border: 2px solid #533483; }
+        .sprite { text-align: center; width: 140px; }
+        .monster-art { font-size: 60px; margin-bottom: 10px; filter: drop-shadow(0 0 10px #fff); }
+        .hp-bar-bg { width: 100%; height: 12px; background: #1a1a2e; border: 2px solid #fff; border-radius: 6px; overflow: hidden; }
+        .hp-fill { height: 100%; background: #00ff41; transition: width 0.3s ease-out; }
+        .name-tag { font-size: 12px; margin-bottom: 8px; color: #e94560; font-weight: bold; }
+
+        /* Question Area */
+        #dialogue { min-height: 50px; background: #fff; color: #16213e; padding: 15px; margin-bottom: 15px; border-radius: 8px; font-size: 16px; line-height: 1.4; border: 4px solid #e94560; }
+        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .move-btn { background: #0f3460; color: #fff; border: 2px solid #4834d4; padding: 15px; cursor: pointer; border-radius: 8px; font-size: 14px; transition: 0.1s; }
+        .move-btn:hover { background: #e94560; transform: scale(1.02); }
+        .move-btn:active { transform: scale(0.98); }
+        
+        .score-box { text-align: center; margin-top: 15px; font-size: 14px; color: #00ff41; }
+        .flash-red { animation: flash 0.2s; }
+        @keyframes flash { 0% { background: #e94560; } 100% { background: #0f3460; } }
+    </style>
+</head>
+<body>
+
+<div id="game-box">
+    <div id="game-container">
+        <div class="battle-scene" id="battle-area">
+            <div class="sprite">
+                <div class="name-tag">HERO</div>
+                <div class="hp-bar-bg"><div id="player-hp" class="hp-fill" style="width: 100%;"></div></div>
+                <div class="monster-art">⚔️</div>
+            </div>
+            <div class="sprite">
+                <div class="name-tag" id="enemy-name">MONSTER</div>
+                <div class="hp-bar-bg"><div id="enemy-hp" class="hp-fill" style="width: 100%;"></div></div>
+                <div class="monster-art" id="enemy-icon">👾</div>
+            </div>
+        </div>
+
+        <div id="dialogue">A wild verbal question appeared!</div>
+
+        <div class="options-grid" id="action-grid"></div>
+        <div class="score-box">Monsters Defeated: <span id="kill-count">0</span></div>
+    </div>
+</div>
+
+<script>
+const verbalDatabase = [
+    { type: "SYNONYM", q: "What is a synonym for MITIGATE?", options: ["Worsen", "Soothe", "Hurry", "Ignore", "Create"], correct: 1 },
+    { type: "ANALOGY", q: "FLOWER : BOUQUET ::", options: ["Tree : Forest", "Bird : Feather", "Car : Engine", "Page : Book", "Person : Crowd"], correct: 3 },
+    { type: "SYNONYM", q: "What is a synonym for LACONIC?", options: ["Loud", "Brief", "Happy", "Rich", "Strong"], correct: 1 },
+    { type: "ANALOGY", q: "SCALPEL : SURGEON ::", options: ["Pen : Paper", "Gavel : Judge", "Hammer : Nail", "Music : Composer", "Lawyer : Court"], correct: 1 },
+    { type: "SYNONYM", q: "What is a synonym for ADROIT?", options: ["Skillful", "Clumsy", "Lazy", "Poor", "Honest"], correct: 0 },
+    { type: "ANALOGY", q: "CACOPHONY : SOUND ::", options: ["Glare : Light", "Sweet : Taste", "Hard : Touch", "Color : Sight", "Wet : Water"], correct: 0 },
+    { type: "SYNONYM", q: "What is a synonym for EPHEMERAL?", options: ["Eternal", "Short-lived", "Massive", "Bright", "Thin"], correct: 1 },
+    { type: "ANALOGY", q: "RECLUSE : SOCIETY ::", options: ["Patriot : Country", "Pacifist : War", "Teacher : School", "Athlete : Sport", "Scholar : Library"], correct: 1 },
+    { type: "SYNONYM", q: "What is a synonym for GARRULOUS?", options: ["Silent", "Strong", "Talkative", "Afraid", "Smart"], correct: 2 },
+    { type: "ANALOGY", q: "OSCILLATE : PENDULUM ::", options: ["Spin : Wheel", "Erupt : Volcano", "Flow : River", "Burn : Fire", "Fly : Bird"], correct: 0 }
+];
+
+let playerHP = 100;
+let enemyHP = 100;
+let kills = 0;
+const monsterIcons = ["🐉", "🐙", "👻", "👹", "🤖", "🦁", "🦂"];
+
+function nextMonster() {
+    // Reset Enemy HP
+    enemyHP = 100;
+    document.getElementById('enemy-hp').style.width = '100%';
+    document.getElementById('enemy-icon').innerText = monsterIcons[Math.floor(Math.random() * monsterIcons.length)];
+    
+    // Pick Question
+    const q = verbalDatabase[Math.floor(Math.random() * verbalDatabase.length)];
+    document.getElementById('enemy-name').innerText = q.type;
+    document.getElementById('dialogue').innerText = q.q;
+    
+    const grid = document.getElementById('action-grid');
+    grid.innerHTML = q.options.map((opt, i) => `
+        <button class="move-btn" onclick="attack(${i === q.correct})">${opt}</button>
+    `).join('');
+}
+
+function attack(isCorrect) {
+    const battleArea = document.getElementById('battle-area');
+    
+    if (isCorrect) {
+        // Success: Monster takes full damage and dies
+        enemyHP = 0;
+        document.getElementById('enemy-hp').style.width = '0%';
+        kills++;
+        document.getElementById('kill-count').innerText = kills;
+        document.getElementById('dialogue').innerText = "CRITICAL HIT! Monster Defeated!";
+        
+        setTimeout(nextMonster, 600); // Fast transition to next monster
+    } else {
+        // Failure: Player takes damage
+        playerHP -= 20;
+        battleArea.classList.add('flash-red');
+        document.getElementById('player-hp').style.width = playerHP + '%';
+        document.getElementById('dialogue').innerText = "Missed! The monster counter-attacks!";
+        
+        if (playerHP <= 0) {
+            document.getElementById('dialogue').innerText = "GAME OVER. You fainted!";
+            document.getElementById('action-grid').innerHTML = '<button class="move-btn" style="grid-column: 1/3" onclick="location.reload()">REVIVE (Restart)</button>';
+        } else {
+            setTimeout(() => {
+                battleArea.classList.remove('flash-red');
+            }, 200);
+        }
+    }
+}
+
+nextMonster();
+</script>
+</body>
+</html>
